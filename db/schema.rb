@@ -10,16 +10,24 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.1].define(version: 2026_01_01_000000) do
+ActiveRecord::Schema[8.1].define(version: 2026_09_10_000000) do
+  # These are extensions that must be enabled in order to support this database
+  enable_extension "pg_catalog.plpgsql"
+
   create_table "documents", force: :cascade do |t|
+    t.datetime "approved_at"
     t.datetime "created_at", null: false
     t.string "file_url"
+    t.text "instructions"
     t.text "internal_note"
     t.string "kind", null: false
     t.integer "mortgage_project_id", null: false
     t.integer "mortgagor_id"
+    t.datetime "rejected_at"
     t.string "rejection_reason"
+    t.datetime "requested_at", default: -> { "CURRENT_TIMESTAMP" }, null: false
     t.string "status", default: "pending", null: false
+    t.datetime "submitted_at"
     t.datetime "updated_at", null: false
     t.index ["mortgage_project_id"], name: "index_documents_on_mortgage_project_id"
     t.index ["mortgagor_id"], name: "index_documents_on_mortgagor_id"

@@ -7,7 +7,7 @@ module NovaGQL
     # Fields are authenticated by default; `enforceable: false` opts out.
     field :ping, String, null: false, enforceable: false, description: 'Health check. Needs no caller.'
 
-    field :whoami, resolver: Queries::Whoami
+    field :client_project, resolver: Queries::ClientProject
 
     def ping = 'pong'
   end

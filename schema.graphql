@@ -1,58 +1,63 @@
-"""
-Whoever is calling. Wiring example, delete it.
-"""
-type Caller {
-  """
-  Mortgage file the caller is scoped to, if any.
-  """
-  projectId: ID
+input ApproveDocumentInput {
+  documentId: ID!
+}
 
-  """
-  Role the API resolved from the request.
-  """
-  role: String!
+type ApproveDocumentPayload {
+  document: Document
 }
 
 """
-Input for echo. Wiring example, delete it.
+An ISO 8601-encoded datetime
 """
-input EchoInput {
-  """
-  Anything. It comes back as is.
-  """
-  message: String!
+scalar DateTime @specifiedBy(url: "https://tools.ietf.org/html/rfc3339")
+
+type Document {
+  approvedAt: DateTime
+  documentType: String!
+  file: DocumentFile
+  id: ID!
+  instructions: String
+  internalNote: String
+  rejectedAt: DateTime
+  rejectionReason: String
+  requestedAt: DateTime!
+  status: DocumentStatus!
+  submittedAt: DateTime
 }
 
 """
-Result of echo. Wiring example, delete it.
+Simulated stored file backed by the starter file_url; no object storage integration.
 """
-type EchoPayload {
-  """
-  Role the API resolved from the request.
-  """
-  callerRole: String!
+type DocumentFile {
+  id: ID!
+  url: String!
+}
 
-  """
-  What you sent.
-  """
-  message: String!
+enum DocumentStatus {
+  APPROVED
+  REJECTED
+  REQUESTED
+  SUBMITTED
+}
+
+type MortgageProject {
+  documents: [Document!]!
+  id: ID!
+  isBlocked: Boolean!
 }
 
 type Mutation {
   """
-  Returns what you send, plus the resolved role. Wiring example, delete it.
+  Approves a submitted document in the expert’s authorized project.
   """
-  echo(input: EchoInput!): EchoPayload!
+  approveDocument(input: ApproveDocumentInput!): ApproveDocumentPayload!
 }
 
 type Query {
+  clientProject: MortgageProject!
+
   """
   Health check. Needs no caller.
   """
   ping: String!
-
-  """
-  Returns the caller the API resolved. Wiring example, delete it.
-  """
-  whoami: Caller!
 }

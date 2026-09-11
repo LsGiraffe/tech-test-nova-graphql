@@ -1,7 +1,173 @@
-# Le schéma que tu proposes, en SDL (Schema Definition Language).
-#
-# Il couvre les deux consommateurs décrits dans BRIEF.md : l'app client et le back-office
-# expert.
-#
-# C'est une proposition d'architecture, elle n'a pas besoin d'être entièrement implémentée.
-# Ne la confonds pas avec le schema.graphql de la racine, qui est généré depuis le code servi.
+scalar DateTime
+
+type Query {
+  """
+  Returns the client's project, identified from the request context.
+  """
+  clientProject: MortgageProject!
+
+  """
+  Lists the expert's assigned projects, prioritizing the oldest submissions awaiting review.
+  Other projects follow, newest first. ID descending breaks ties.
+  Filtering and sorting happen before pagination, nullable blocked bool to filter only on blocked projects.
+  """
+  expertProjects(
+    limit: Int! = 20
+    offset: Int! = 0
+    blocked: Boolean
+  ): MortgageProjectPage!
+
+  """Returns a project's details if it is assigned to the expert."""
+  expertProject(id: ID!): MortgageProject!
+}
+
+type Mutation {
+  """
+  The client submits a missing document or replaces a rejected one in their project.
+  It becomes SUBMITTED, with a new submission date. Previous review dates and the
+  rejection reason are cleared; the original request date is kept. No version history.
+  """
+  submitDocument(input: SubmitDocumentInput!): SubmitDocumentPayload!
+
+  """
+  The expert approves a submitted document in an assigned project and records the approval date.
+  """
+  approveDocument(input: ApproveDocumentInput!): ApproveDocumentPayload!
+
+  """
+  The expert rejects a submitted document in an assigned project.
+  Records the rejection date and a reason explaining what the client needs to correct.
+  """
+  rejectDocument(input: RejectDocumentInput!): RejectDocumentPayload!
+
+  """
+  The expert edits the single internal note on a document in an assigned project.
+  This does not change its status or business dates.
+  """
+  updateDocumentNote(input: UpdateDocumentNoteInput!): UpdateDocumentNotePayload!
+
+  """
+  The expert requests an additional document in an assigned project, using free text.
+  It starts as REQUESTED, dated now, without a file.
+  """
+  requestDocument(input: RequestDocumentInput!): RequestDocumentPayload!
+}
+
+type MortgageProject {
+  id: ID!
+  documents: [Document!]!
+  """
+  Computed from the documents: true if the client or expert has had an action pending
+  for over 72 hours, counted from the request, submission or rejection as appropriate.
+  Approved documents do not count.
+  """
+  isBlocked: Boolean!
+}
+
+"""
+One expected document, reviewed independently: three payslips mean three documents.
+Each accepts one file, which can contain several pages. Initial requests are prepared upstream.
+"""
+type Document {
+  id: ID!
+  """Free-text name, such as "Identity document" or "Payslip"."""
+  documentType: String!
+  """What to provide, including the borrower and period when relevant."""
+  instructions: String
+  status: DocumentStatus!
+  """The current file, absent until the client submits it."""
+  file: DocumentFile
+  """Explains the refusal to the client; cleared when they submit a replacement."""
+  rejectionReason: String
+  """
+  Expert only. If a client requests it, return null and a FORBIDDEN error,
+  while keeping the other document fields available.
+  """
+  internalNote: String
+  """Initial request date, kept even when the file is replaced."""
+  requestedAt: DateTime!
+  """Submission time of the current file."""
+  submittedAt: DateTime
+  """Rejection date of the current file, cleared on replacement."""
+  rejectedAt: DateTime
+  """Approval time of the current file."""
+  approvedAt: DateTime
+}
+
+enum DocumentStatus {
+  REQUESTED
+  SUBMITTED
+  REJECTED
+  APPROVED
+}
+
+type DocumentFile {
+  """Reference to the file in storage."""
+  id: ID!
+  """Download URL, provided only to callers allowed to access this document."""
+  url: String!
+}
+
+type MortgageProjectPage {
+  projects: [MortgageProject!]!
+  """Whether more matching projects remain after this page."""
+  hasMore: Boolean!
+}
+
+input SubmitDocumentInput {
+  documentId: ID!
+  """
+  Reference received after uploading the file to object storage, outside this API.
+  The server checks that the client is allowed to use it.
+  """
+  fileId: ID!
+}
+
+input ApproveDocumentInput {
+  documentId: ID!
+}
+
+"""Separate from approval so that a rejection always requires a reason."""
+input RejectDocumentInput {
+  documentId: ID!
+  """Must explain the refusal; an empty or whitespace-only reason is not accepted."""
+  reason: String!
+}
+
+input UpdateDocumentNoteInput {
+  documentId: ID!
+  """New note text; omitted or null clears the existing note."""
+  note: String
+}
+
+input RequestDocumentInput {
+  projectId: ID!
+  """Name of the requested document, in free text; must not be blank."""
+  documentType: String!
+  """Optional guidance, including the borrower or period concerned."""
+  instructions: String
+}
+
+# Mutations return the updated document on success. A refused action makes no changes.
+# All application errors use GraphQL errors with a message and extensions.code:
+# UNAUTHORIZED, FORBIDDEN, NOT_FOUND, INVALID_INPUT or INVALID_STATE.
+
+type SubmitDocumentPayload {
+  document: Document
+}
+
+type ApproveDocumentPayload {
+  document: Document
+}
+
+type RejectDocumentPayload {
+  document: Document
+}
+
+type UpdateDocumentNotePayload {
+  document: Document
+}
+
+type RequestDocumentPayload {
+  document: Document
+}

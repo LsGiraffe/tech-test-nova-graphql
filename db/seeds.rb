@@ -42,4 +42,15 @@ solo.documents.create!(
 )
 solo.documents.create!(kind: 'tax_notice', status: 'pending', mortgagor: robin)
 
+# Explicit example dates and recipient guidance for the client query.
+Document.includes(:mortgagor).find_each do |document|
+  document.update!(
+    requested_at: 5.days.ago,
+    submitted_at: document.file_url.present? ? 4.days.ago : nil,
+    rejected_at: document.status == 'rejected' ? 1.day.ago : nil,
+    approved_at: document.status == 'validated' ? 3.days.ago : nil,
+    instructions: document.mortgagor ? "For #{document.mortgagor.first_name} #{document.mortgagor.last_name}" : 'For the whole project'
+  )
+end
+
 puts "Seeded #{MortgageProject.count} projects, #{Document.count} documents."

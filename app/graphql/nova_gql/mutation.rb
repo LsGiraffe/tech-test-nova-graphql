@@ -4,6 +4,6 @@ module NovaGQL
   class Mutation < Base::ProtectedObject
     graphql_name 'Mutation'
 
-    field :echo, mutation: Mutations::Echo
+    field :approve_document, mutation: Mutations::ApproveDocument
   end
 end
