@@ -26,7 +26,7 @@ type Document {
 }
 
 """
-Simulated stored file backed by the starter file_url; no object storage integration.
+Simulated stored file backed by the starter file_url. No object storage integration.
 """
 type DocumentFile {
   id: ID!
